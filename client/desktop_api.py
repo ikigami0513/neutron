@@ -21,15 +21,53 @@ class JSApi:
                 return clean_path
         return ""
 
+    def toggle_fullscreen(self):
+        if len(webview.windows) > 0:
+            window = webview.windows[0]
+            window.toggle_fullscreen()
+
+    def _get_auth_headers(self):
+        try:
+            auth_data = storage.load_auth_token()
+            token = auth_data.get('access_token')
+            if token:
+                return {"Authorization": f"Bearer {token}"}
+        except Exception as e:
+            print(f"[Auth Warning] {e}")
+        return {}
+
+    def _get_save_path(self, rom_path):
+        base_name, _ = os.path.splitext(rom_path)
+        save_path = f"{base_name}.sav"
+        
+        print(f"[Debug Path] ROM: {rom_path}")
+        print(f"[Debug Path] SAVE ATTENDUE: {save_path}")
+        return save_path
+
     def _monitor_game_process(self, process, game_id, save_path):
         print(f"Jeu lancé (PID: {process.pid}). Surveillance active...")
         
-        process.wait()
+        start_time = time.time()
         
-        print("Jeu fermé. Lancement de la synchronisation...")
+        process.wait()
+
+        end_time = time.time()
+        
+        print("Jeu fermé. Lancement des tâches de fond...")
         time.sleep(1)
         
-        self._sync_up(game_id, save_path)
+        session_duration = int(end_time - start_time)
+        print(f"[Session] Durée de la partie : {session_duration} secondes")
+
+        try:
+            self._sync_up(game_id, save_path)
+        except Exception as e:
+            print(f"[Erreur Sync] {e}")
+
+        try:
+            self._update_playtime(game_id, session_duration)
+        except Exception as e:
+            print(f"[Erreur Playtime] {e}")
         
         print("Cycle de jeu terminé.")
 
@@ -64,95 +102,85 @@ class JSApi:
             monitor_thread.daemon = True
             monitor_thread.start()
 
-            return {"success": True, "message": "Jeu lancé ! Synchro active."}
+            return {"success": True, "message": "Jeu lancé ! Bon jeu."}
 
         except Exception as e:
             return {"success": False, "message": str(e)}
-        
-    def toggle_fullscreen(self):
-        if len(webview.windows) > 0:
-            window = webview.windows[0]
-            window.toggle_fullscreen()
 
-    def _get_save_path(self, rom_path):
-        """Helper: Get .sav path from .nes/.sfc path"""
-        base_name, _ = os.path.splitext(rom_path)
-        return f"{base_name}.sav"
+    def _update_playtime(self, game_id, duration_seconds):
+        if duration_seconds < 5:
+            print("[Playtime] Session trop courte (<5s), ignorée.")
+            return
+
+        print(f"[Playtime] Envoi de {duration_seconds}s au serveur...")
+        url = f"{config.API_BASE_URL}/games/{game_id}/playtime"
+        headers = self._get_auth_headers()
+        
+        if not headers:
+            print("[Playtime] Échec : Pas de token d'authentification.")
+            return
+
+        resp = requests.post(url, json={"seconds": duration_seconds}, headers=headers)
+        if resp.status_code == 200:
+            print(f"[Playtime] Succès ! Nouveau total reçu du serveur.")
+        else:
+            print(f"[Playtime] Erreur serveur : {resp.status_code}")
 
     def _sync_down(self, game_id, save_path):
-        """
-        Télécharge la dernière sauvegarde si elle est plus récente que la locale.
-        """
         print(f"[Sync] Checking Cloud for Game {game_id}...")
-        
         try:
-            # 1. Demander les infos de la dernière save au serveur
-            # Note: On utilise le nouveau endpoint /latest/info
-            info_resp = requests.get(f"{config.API_BASE_URL}/games/{game_id}/save/latest/info")
+            headers = self._get_auth_headers()
+            info_resp = requests.get(f"{config.API_BASE_URL}/games/{game_id}/save/latest/info", headers=headers)
             
             if info_resp.status_code == 200:
                 server_data = info_resp.json()
-                
-                # Parsing de la date serveur (ISO format string -> float timestamp)
-                # Attention : le serveur renvoie du temps UTC
                 from datetime import datetime
-                server_date_str = server_data['created_at']
-                # Python < 3.7 : strptime. Python 3.7+ : fromisoformat
-                server_dt = datetime.fromisoformat(server_date_str)
+                server_dt = datetime.fromisoformat(server_data['created_at'])
                 server_timestamp = server_dt.timestamp()
 
-                # Vérifier la date locale
                 should_download = False
                 if not os.path.exists(save_path):
                     print("[Sync] Pas de sauvegarde locale. Téléchargement...")
                     should_download = True
                 else:
                     local_timestamp = os.path.getmtime(save_path)
-                    # Si le serveur est plus récent (avec une marge de sécurité de quelques secondes)
                     if server_timestamp > local_timestamp:
-                        print(f"[Sync] Serveur plus récent ({server_date_str}). Mise à jour...")
+                        print(f"[Sync] Serveur plus récent. Mise à jour...")
                         should_download = True
                     else:
                         print("[Sync] La sauvegarde locale est à jour.")
 
                 if should_download:
-                    # Téléchargement du fichier binaire
-                    file_resp = requests.get(f"{config.API_BASE_URL}/games/{game_id}/save/latest")
+                    file_resp = requests.get(f"{config.API_BASE_URL}/games/{game_id}/save/latest", headers=headers)
                     if file_resp.status_code == 200:
                         with open(save_path, 'wb') as f:
                             f.write(file_resp.content)
                         print("[Sync] Succès : Fichier .sav mis à jour !")
-                        
-                        # IMPORTANT : Mettre à jour la date de modification locale pour éviter
-                        # de re-uploader immédiatement après le jeu.
                         os.utime(save_path, (time.time(), time.time()))
                         return True
             else:
-                print("[Sync] Aucune sauvegarde sur le cloud.")
+                print("[Sync] Aucune sauvegarde sur le cloud ou User inconnu.")
 
         except Exception as e:
             print(f"[Sync Error Down] {e}")
         return False
 
     def _sync_up(self, game_id, save_path):
-        """
-        Crée une NOUVELLE version sur le serveur.
-        """
         print(f"[Sync] Préparation de l'upload vers le cloud...")
         if not os.path.exists(save_path):
-            print("[Sync] Fichier introuvable, abandon.")
+            print(f"[Sync] Fichier introuvable à : {save_path}")
+            print("[Sync] Abandon (Le jeu n'a pas sauvegardé ou le chemin est incorrect).")
             return
 
         try:
-            # On envoie le fichier. Le serveur créera une nouvelle ligne dans la table 'saves'
             files = {'file': open(save_path, 'rb')}
-            resp = requests.post(f"{config.API_BASE_URL}/games/{game_id}/save", files=files)
+            headers = self._get_auth_headers()
+            resp = requests.post(f"{config.API_BASE_URL}/games/{game_id}/save", files=files, headers=headers)
             
             if resp.status_code == 200:
                 data = resp.json()
-                print(f"[Sync] Upload réussi ! Nouvelle version ID: {data.get('save_id')}")
+                print(f"[Sync] Upload réussi ! Save ID: {data.get('save_id')}")
             else:
-                print(f"[Sync] Erreur upload: {resp.status_code} - {resp.text}")
+                print(f"[Sync] Erreur upload: {resp.status_code}")
         except Exception as e:
             print(f"[Sync Error Up] {e}")
-            

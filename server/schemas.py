@@ -54,3 +54,6 @@ class Game(GameBase):
     class Config:
         from_attributes = True
         
+class PlaytimeUpdate(BaseModel):
+    seconds: int
+    

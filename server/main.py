@@ -56,6 +56,20 @@ def save_upload_file(upload_file: UploadFile, subfolder: str) -> str:
         
     return f"{subfolder}/{unique_filename}"
 
+def get_current_user(token: str = Depends(OAuth2PasswordBearer(tokenUrl="token")), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
 @app.post("/register", response_model=schemas.Token)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     # Vérifier si user existe déjà
@@ -198,9 +212,14 @@ def read_games(
     return query.offset(skip).limit(limit).all()
 
 @app.post("/games/{game_id}/save")
-def create_save(game_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+def create_save(
+    game_id: int, 
+    file: UploadFile = File(...), 
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     timestamp = int(time.time())
-    filename = f"{game_id}_{timestamp}.sav"
+    filename = f"{game_id}_{current_user.id}_{timestamp}.sav"
     file_location = os.path.join("saves", filename)
 
     with open(file_location, "wb+") as file_object:
@@ -209,6 +228,7 @@ def create_save(game_id: int, file: UploadFile = File(...), db: Session = Depend
     db_save = models.Save(
         file_path=file_location,
         game_id=game_id,
+        user_id=current_user.id,
         created_at=datetime.utcnow()
     )
     db.add(db_save)
@@ -218,9 +238,14 @@ def create_save(game_id: int, file: UploadFile = File(...), db: Session = Depend
     return {"info": "Save version created", "save_id": db_save.id}
 
 @app.get("/games/{game_id}/save/latest")
-def get_latest_save(game_id: int, db: Session = Depends(get_db)):
+def get_latest_save(
+    game_id: int, 
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     latest_save = db.query(models.Save)\
         .filter(models.Save.game_id == game_id)\
+        .filter(models.Save.user_id == current_user.id)\
         .order_by(models.Save.created_at.desc())\
         .first()
 
@@ -234,9 +259,14 @@ def get_latest_save(game_id: int, db: Session = Depends(get_db)):
     )
 
 @app.get("/games/{game_id}/save/latest/info")
-def get_latest_save_info(game_id: int, db: Session = Depends(get_db)):
+def get_latest_save_info(
+    game_id: int, 
+    current_user: models.User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
     latest_save = db.query(models.Save)\
         .filter(models.Save.game_id == game_id)\
+        .filter(models.Save.user_id == current_user.id)\
         .order_by(models.Save.created_at.desc())\
         .first()
 
@@ -247,3 +277,32 @@ def get_latest_save_info(game_id: int, db: Session = Depends(get_db)):
         "created_at": latest_save.created_at.isoformat(),
         "id": latest_save.id
     }
+
+@app.post("/games/{game_id}/playtime")
+def add_playtime(
+    game_id: int, 
+    payload: schemas.PlaytimeUpdate, 
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Chercher si une entrée existe déjà pour ce couple User/Game
+    stat = db.query(models.Playtime)\
+        .filter(models.Playtime.user_id == current_user.id)\
+        .filter(models.Playtime.game_id == game_id)\
+        .first()
+    
+    if not stat:
+        stat = models.Playtime(user_id=current_user.id, game_id=game_id, seconds=0)
+        db.add(stat)
+    
+    stat.seconds += payload.seconds
+    stat.last_played = datetime.utcnow()
+    
+    db.commit()
+    return {"new_total": stat.seconds}
+
+@app.get("/users/me/stats")
+def get_my_stats(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    stats = db.query(models.Playtime).filter(models.Playtime.user_id == current_user.id).all()
+    # Retourne {1: 3600, 2: 120, ...}
+    return {stat.game_id: stat.seconds for stat in stats}

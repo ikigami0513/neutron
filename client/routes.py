@@ -9,6 +9,35 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = "super_secret_key_change_me"
 
+@app.template_filter('format_playtime')
+def format_playtime_filter(seconds):
+    """
+    Convertit un nombre de secondes en format lisible.
+    Exemples : 
+    - None/0 -> "New"
+    - 45 -> "< 1m"
+    - 360 -> "6m"
+    - 3700 -> "1h 1m"
+    """
+    if not seconds:
+        return "New"
+        
+    try:
+        seconds = int(seconds)
+    except (ValueError, TypeError):
+        return "New"
+
+    if seconds < 60:
+        return "< 1m"
+    
+    minutes = (seconds // 60) % 60
+    hours = seconds // 3600
+    
+    if hours > 0:
+        return f"{hours}h {minutes:02d}m" # :02d ajoute un zéro devant les minutes (ex: 1h 05m)
+    else:
+        return f"{minutes}m"
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -122,12 +151,23 @@ def list_games():
     except requests.exceptions.ConnectionError:
         flash("API offline.", "error")
 
+    user_stats = {}
+    try:
+        # On utilise le token de session pour s'auth auprès de l'API
+        headers = {"Authorization": f"Bearer {session.get('user_token')}"}
+        stats_resp = requests.get(f"{config.API_BASE_URL}/users/me/stats", headers=headers)
+        if stats_resp.status_code == 200:
+            user_stats = stats_resp.json() # { "1": 500, "2": 30... }
+    except:
+        pass
+
     local_library = storage.load_local_library()
     for game in games:
         game_id_str = str(game['id'])
         if game_id_str in local_library and os.path.exists(local_library[game_id_str]):
             game['is_installed'] = True
             game['local_path'] = local_library[game_id_str]
+            game['playtime_seconds'] = user_stats.get(game_id_str, 0)
         else:
             game['is_installed'] = False
 

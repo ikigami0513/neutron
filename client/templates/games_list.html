@@ -4,173 +4,155 @@
 
 <div class="flex items-end justify-between mb-6">
     <div>
-        <h1 class="text-4xl font-extrabold text-white tracking-tight">My Library</h1>
-        <p class="text-slate-400 mt-2">
-            {{ games|length }} result{{ 's' if games|length > 1 else '' }}
-        </p>
-    </div>
-</div>
-
-<div class="mb-10 flex space-x-3 overflow-x-auto pb-4 no-scrollbar">
-    
-    <a href="/" 
-       class="flex items-center px-5 py-2.5 rounded-full border border-white/5 transition-all whitespace-nowrap
-       {{ 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' if not active_filter else 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white' }}">
-        <i class="fa-solid fa-border-all mr-2"></i>
-        <span class="font-bold text-sm">All Games</span>
-    </a>
-
-    {% for platform in platforms %}
-        <a href="/?platform_id={{ platform.id }}" 
-           class="flex items-center px-5 py-2.5 rounded-full border border-white/5 transition-all whitespace-nowrap group
-           {{ 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' if active_filter == platform.id|string else 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white' }}">
-            
-            {% if platform.icon_path %}
-                <img src="{{ api_base_url }}/media/{{ platform.icon_path }}" 
-                     class="w-4 h-4 mr-2 object-contain {{ 'invert' if active_filter != platform.id|string }}">
-            {% else %}
-                <i class="fa-solid fa-gamepad mr-2"></i>
-            {% endif %}
-            
-            <span class="font-bold text-sm">{{ platform.name }}</span>
-        </a>
-    {% endfor %}
-</div>
-
-<div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
-    <div>
-        <h1 class="text-4xl font-extrabold text-white tracking-tight">My Library</h1>
-        <p class="text-slate-400 mt-2">
+        <h1 class="text-3xl font-extrabold text-white tracking-tight">My Library</h1>
+        <p class="text-slate-400 mt-1 text-sm">
             {% if active_search %}
                 Search results for "<span class="text-white font-bold">{{ active_search }}</span>"
             {% else %}
-                {{ games|length }} games ready to play
+                {{ games|length }} game{{ 's' if games|length > 1 else '' }} in collection
             {% endif %}
         </p>
     </div>
+</div>
+
+<div class="flex flex-col md:flex-row gap-4 mb-8 justify-between items-start md:items-center">
     
-    <form action="/" method="GET" class="relative w-full md:w-72 group">
-        
+    <div class="flex space-x-2 overflow-x-auto pb-2 no-scrollbar max-w-full md:max-w-3xl mask-gradient-right">
+        <a href="/" 
+           class="flex items-center px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap border border-white/5
+           {{ 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' if not active_filter else 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white' }}">
+            <i class="fa-solid fa-border-all mr-2"></i> All
+        </a>
+
+        {% for platform in platforms %}
+            <a href="/?platform_id={{ platform.id }}" 
+               class="flex items-center px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap border border-white/5 group
+               {{ 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' if active_filter == platform.id|string else 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white' }}">
+                {% if platform.icon_path %}
+                    <img src="{{ api_base_url }}/media/{{ platform.icon_path }}" 
+                         class="w-3.5 h-3.5 mr-2 object-contain {{ 'invert' if active_filter != platform.id|string }}">
+                {% else %}
+                    <i class="fa-solid fa-gamepad mr-2"></i>
+                {% endif %}
+                {{ platform.name }}
+            </a>
+        {% endfor %}
+    </div>
+
+    <form action="/" method="GET" class="relative w-full md:w-64 group shrink-0">
         {% if active_filter %}
             <input type="hidden" name="platform_id" value="{{ active_filter }}">
         {% endif %}
-
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <i class="fa-solid fa-search text-slate-500 group-focus-within:text-indigo-400 transition-colors"></i>
+            <i class="fa-solid fa-search text-slate-500 text-xs group-focus-within:text-indigo-400"></i>
         </div>
-        
-        <input type="text" 
-               name="q" 
-               value="{{ active_search or '' }}"
-               placeholder="Search collection..." 
-               class="bg-slate-800/50 border border-white/10 text-slate-200 text-sm rounded-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 p-2.5 placeholder-slate-500 transition-all focus:bg-slate-800 shadow-sm"
+        <input type="text" name="q" value="{{ active_search or '' }}" placeholder="Find a game..." 
+               class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-9 p-2.5 transition-colors"
                autocomplete="off">
-               
         {% if active_search %}
             <a href="/{{ '?platform_id=' + active_filter if active_filter else '' }}" 
-               class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-white cursor-pointer">
-                <i class="fa-solid fa-xmark"></i>
+               class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-white">
+                <i class="fa-solid fa-xmark text-xs"></i>
             </a>
         {% endif %}
     </form>
 </div>
 
 {% if games %}
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-6 xl:gap-8">
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
         {% for game in games %}
             
-            <div class="group relative bg-slate-800 rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-indigo-500/20 transition-all duration-300 hover:-translate-y-2 overflow-hidden">
+            <div class="group bg-slate-800 rounded-xl shadow-lg border border-white/5 overflow-hidden hover:shadow-indigo-500/10 hover:border-indigo-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full">
                 
-                <div class="aspect-[3/4] w-full relative overflow-hidden bg-slate-900">
+                <div class="aspect-[3/4] w-full relative bg-slate-900 overflow-hidden">
                     {% if game.cover_path %}
                         <img src="{{ api_base_url }}/media/{{ game.cover_path }}" 
                              alt="{{ game.title }}" 
-                             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                             class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
                     {% else %}
-                        <div class="w-full h-full flex flex-col items-center justify-center text-slate-600 bg-slate-800">
-                            <i class="fa-solid fa-gamepad text-4xl mb-2"></i>
-                            <span class="text-xs font-bold uppercase tracking-widest">No Cover</span>
+                        <div class="w-full h-full flex flex-col items-center justify-center text-slate-700 bg-slate-900">
+                            <i class="fa-regular fa-image text-3xl mb-2"></i>
+                            <span class="text-[10px] font-bold uppercase">No Cover</span>
                         </div>
                     {% endif %}
 
                     {% if game.is_installed %}
-                        <div class="absolute top-2 right-2 bg-green-500/90 backdrop-blur text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">
-                            INSTALLED
+                        <div class="absolute top-2 right-2">
+                            <span class="flex h-3 w-3 relative">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500 border-2 border-slate-800"></span>
+                            </span>
                         </div>
                     {% endif %}
-                    
-                    <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60 group-hover:opacity-90 transition-opacity"></div>
                 </div>
 
-                <div class="absolute bottom-0 left-0 w-full p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                <div class="p-4 flex flex-col flex-grow">
                     
-                    <div class="flex items-center space-x-2 mb-1 opacity-80">
-                        {% if game.platform and game.platform.icon_path %}
-                            <img src="{{ api_base_url }}/media/{{ game.platform.icon_path }}" class="w-4 h-4 object-contain invert">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-1.5 opacity-60">
+                            {% if game.platform and game.platform.icon_path %}
+                                <img src="{{ api_base_url }}/media/{{ game.platform.icon_path }}" class="w-3 h-3 object-contain invert">
+                            {% endif %}
+                            <span class="text-[10px] font-bold text-slate-300 uppercase tracking-wide truncate max-w-[80px]">
+                                {{ game.platform.name if game.platform else 'Unknown' }}
+                            </span>
+                        </div>
+
+                        {% if game.playtime_seconds and game.playtime_seconds > 0 %}
+                            <div class="flex items-center text-[10px] font-medium text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">
+                                <i class="fa-solid fa-clock mr-1 text-[9px]"></i>
+                                {{ game.playtime_seconds | format_playtime }}
+                            </div>
                         {% endif %}
-                        <span class="text-xs font-bold text-indigo-300 uppercase tracking-wider">
-                            {{ game.platform.name if game.platform else 'Unknown' }}
-                        </span>
                     </div>
 
-                    <h3 class="text-lg font-bold text-white leading-tight mb-4 drop-shadow-md">
+                    <h3 class="text-sm font-bold text-white leading-snug mb-3 line-clamp-2 min-h-[2.5em]" title="{{ game.title }}">
                         {{ game.title }}
                     </h3>
 
-                    <div class="grid grid-cols-1 gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75">
+                    <div class="mt-auto pt-2">
                         {% if game.is_installed %}
                             <button onclick="launchGame('{{ game.id }}', '{{ game.platform.id }}')" 
-                                    class="w-full bg-white text-slate-900 hover:bg-indigo-400 hover:text-white font-bold py-2 rounded-lg text-sm transition-colors flex items-center justify-center shadow-lg">
+                                    class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2 rounded-lg transition-all shadow-lg shadow-indigo-900/20 flex items-center justify-center group-hover:shadow-indigo-500/40">
                                 <i class="fa-solid fa-play mr-2"></i> PLAY
                             </button>
                         {% else %}
                             <form action="/games/install/{{ game.id }}" method="POST">
                                 <button type="submit" 
-                                        class="w-full bg-slate-700/80 backdrop-blur text-white hover:bg-blue-600 font-semibold py-2 rounded-lg text-sm transition-colors flex items-center justify-center border border-white/10">
-                                    <i class="fa-solid fa-cloud-arrow-down mr-2"></i> INSTALL
+                                        class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center border border-white/5">
+                                    <i class="fa-solid fa-download mr-2"></i> INSTALL
                                 </button>
                             </form>
                         {% endif %}
                     </div>
-                </div>
 
+                </div>
             </div>
+
         {% endfor %}
     </div>
 
 {% else %}
-    <div class="flex flex-col items-center justify-center h-[60vh] text-center">
-        
+    <div class="flex flex-col items-center justify-center h-[50vh] text-center mt-10">
         {% if active_search or active_filter %}
-            <div class="bg-slate-800 p-6 rounded-full mb-6 border border-white/5">
-                <i class="fa-solid fa-magnifying-glass-minus text-5xl text-slate-500"></i>
+            <div class="bg-slate-800/50 p-6 rounded-full mb-4 border border-white/5">
+                <i class="fa-solid fa-filter-circle-xmark text-4xl text-slate-600"></i>
             </div>
-            
-            <h2 class="text-2xl font-bold text-white mb-2">No games found</h2>
-            
-            <p class="text-slate-400 max-w-md mb-8">
-                {% if active_search %}
-                    We couldn't find anything matching "<span class="text-white">{{ active_search }}</span>".
-                {% else %}
-                    There are no games in this category yet.
-                {% endif %}
-            </p>
-            
-            <a href="/" class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2.5 rounded-full font-medium transition-colors border border-white/10 flex items-center">
-                <i class="fa-solid fa-xmark mr-2"></i> Clear Filters
+            <h2 class="text-xl font-bold text-white mb-2">No matches found</h2>
+            <p class="text-slate-400 text-sm mb-6">Try adjusting your filters or search terms.</p>
+            <a href="/" class="text-indigo-400 hover:text-indigo-300 text-sm font-bold flex items-center">
+                <i class="fa-solid fa-arrow-left mr-2"></i> Clear all filters
             </a>
-
         {% else %}
-            <div class="bg-slate-800 p-8 rounded-full mb-6 animate-pulse">
-                <i class="fa-solid fa-ghost text-6xl text-slate-600"></i>
+            <div class="bg-slate-800/50 p-6 rounded-full mb-4 border border-white/5">
+                <i class="fa-solid fa-gamepad text-4xl text-slate-600"></i>
             </div>
-            <h2 class="text-3xl font-bold text-white mb-2">It's quiet here...</h2>
-            <p class="text-slate-400 max-w-md mb-8">You haven't added any games yet. Start building your ultimate retro collection now.</p>
-            <a href="/games/new" class="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-indigo-500/25 transition-all hover:scale-105">
-                Add Your First Game
+            <h2 class="text-xl font-bold text-white mb-2">Library Empty</h2>
+            <p class="text-slate-400 text-sm mb-6">Your collection is waiting to be built.</p>
+            <a href="/games/new" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all">
+                Add Game
             </a>
         {% endif %}
-
     </div>
 {% endif %}
 
@@ -184,24 +166,30 @@
             return;
         }
 
-        // Feedback visuel immédiat (Optionnel)
         const btn = event.currentTarget;
         const originalContent = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Launching...';
+        
+        // Feedback style
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Loading';
+        btn.classList.add('opacity-75', 'cursor-wait');
         
         window.pywebview.api.launch_game(gameId, platformId).then(function(response) {
             if (!response.success) {
                 alert("Error: " + response.message);
-                btn.innerHTML = originalContent; // Remettre le texte si erreur
+                resetBtn();
             } else {
-                // Le jeu s'est lancé, on remet le bouton après 3s
-                setTimeout(() => { btn.innerHTML = originalContent; }, 3000);
+                // Reset après un délai pour montrer que l'action a été prise en compte
+                setTimeout(resetBtn, 4000);
             }
         }).catch(function(err) {
             console.error(err);
-            alert("Critical Error");
-            btn.innerHTML = originalContent;
+            resetBtn();
         });
+
+        function resetBtn() {
+            btn.innerHTML = originalContent;
+            btn.classList.remove('opacity-75', 'cursor-wait');
+        }
     }
 </script>
 {% endblock %}
