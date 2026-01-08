@@ -1,6 +1,7 @@
 poetry.lock
 .venv
 *.pyc
+tests/
 
 server/media/
 server/app.db

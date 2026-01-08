@@ -37,6 +37,35 @@ def format_playtime_filter(seconds):
         return f"{hours}h {minutes:02d}m" # :02d ajoute un zéro devant les minutes (ex: 1h 05m)
     else:
         return f"{minutes}m"
+    
+@app.context_processor
+def inject_theme_config():
+    """
+    Rend la configuration 'theme' disponible dans tous les templates HTML.
+    """
+    config_data = storage.load_local_config()
+    
+    # Valeurs par défaut
+    theme = {
+        'color': config_data.get('theme_color', '#4f46e5'), # Indigo-600 par défaut
+        'bg_path': config_data.get('theme_bg_path', ''),
+        'bg_opacity': config_data.get('theme_bg_opacity', '95') # Opacité du calque noir par dessus l'image
+    }
+    return dict(theme=theme)
+
+@app.route('/local_asset')
+def local_asset():
+    """Sert une image locale (ex: wallpaper) pour contourner les restrictions du navigateur."""
+    path = request.args.get('path')
+    if not path or not os.path.exists(path):
+        return "", 404
+    
+    # On détermine le dossier et le nom du fichier
+    directory = os.path.dirname(path)
+    filename = os.path.basename(path)
+    
+    from flask import send_from_directory
+    return send_from_directory(directory, filename)
 
 def login_required(f):
     @wraps(f)
@@ -306,14 +335,21 @@ def settings_page():
 @login_required
 def save_settings():
     local_config = storage.load_local_config()
-
+    
+    # 1. Fullscreen
     local_config['fullscreen'] = True if request.form.get('fullscreen') else False
+    
+    # 2. Thème
+    local_config['theme_color'] = request.form.get('theme_color', '#4f46e5')
+    local_config['theme_bg_path'] = request.form.get('theme_bg_path', '')
+    local_config['theme_bg_opacity'] = request.form.get('theme_bg_opacity', '95')
 
+    # 3. Emulateurs
     for key, value in request.form.items():
         if key.startswith("emulator_path_"):
             platform_id = key.replace("emulator_path_", "")
             local_config[platform_id] = value.strip()
     
     storage.save_local_config(local_config)
-    flash("Configuration sauvegardée.", "success")
+    flash("Configuration saved.", "success")
     return redirect(url_for('settings_page'))

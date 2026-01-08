@@ -5,13 +5,19 @@
     <title>Neutron Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* On injecte le style ici car login n'hérite pas de base.html */
+        .bg-primary { background-color: {{ theme.color if theme else '#4f46e5' }} !important; }
+        .focus\:border-primary:focus { border-color: {{ theme.color if theme else '#4f46e5' }} !important; }
+        .focus\:ring-primary:focus { --tw-ring-color: {{ theme.color if theme else '#4f46e5' }} !important; }
+    </style>
 </head>
 <body class="bg-slate-900 text-white h-screen flex items-center justify-center font-sans">
 
     <div class="w-full max-w-md p-8 space-y-8 bg-slate-800 rounded-2xl shadow-2xl border border-white/5">
         
         <div class="text-center">
-            <div class="mx-auto h-16 w-16 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-4">
+            <div class="mx-auto h-16 w-16 bg-primary rounded-xl flex items-center justify-center shadow-lg mb-4">
                 <i class="fa-solid fa-atom text-white text-3xl"></i>
             </div>
             <h2 class="text-3xl font-bold tracking-tight">Welcome back</h2>
@@ -33,20 +39,20 @@
                 <div>
                     <label for="username" class="sr-only">Username</label>
                     <input id="username" name="username" type="text" required 
-                        class="relative block w-full appearance-none rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-white placeholder-slate-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm" 
+                        class="relative block w-full appearance-none rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-white placeholder-slate-500 focus:z-10 focus:border-primary focus:outline-none focus:ring-primary sm:text-sm" 
                         placeholder="Username">
                 </div>
                 <div>
                     <label for="password" class="sr-only">Password</label>
                     <input id="password" name="password" type="password" required 
-                        class="relative block w-full appearance-none rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-white placeholder-slate-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm" 
+                        class="relative block w-full appearance-none rounded-lg border border-slate-600 bg-slate-900 px-3 py-3 text-white placeholder-slate-500 focus:z-10 focus:border-primary focus:outline-none focus:ring-primary sm:text-sm" 
                         placeholder="Password">
                 </div>
             </div>
 
             <div class="flex flex-col gap-3">
                 <button type="submit" name="action" value="login"
-                    class="group relative flex w-full justify-center rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-800 transition">
+                    class="group relative flex w-full justify-center rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-slate-800 transition">
                     Sign in
                 </button>
                 
