@@ -5,6 +5,9 @@ import time
 from datetime import datetime
 from typing import List, Optional
 
+import requests
+from igdb_service import igdb
+
 from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, Form
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -81,26 +84,52 @@ def create_game(
     cover: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
-    platform = db.query(models.Platform).filter(models.Platform.id == platform_id).first()
-    if not platform:
-        raise HTTPException(status_code=404, detail="Platform not found")
-
-    rom_path = save_upload_file(rom, "roms")
+    rom_filename = f"{uuid.uuid4()}_{rom.filename}"
+    rom_path = os.path.join(UPLOAD_DIR, "roms", rom_filename)
     
-    cover_path = None
+    with open(rom_path, "wb+") as file_object:
+        shutil.copyfileobj(rom.file, file_object)
+
+    cover_db_path = None
+
     if cover:
-        cover_path = save_upload_file(cover, "covers")
+        cover_filename = f"{uuid.uuid4()}_{cover.filename}"
+        cover_real_path = os.path.join(UPLOAD_DIR, "covers", cover_filename)
+        
+        with open(cover_real_path, "wb+") as file_object:
+            shutil.copyfileobj(cover.file, file_object)
+        
+        cover_db_path = f"covers/{cover_filename}"
+    
+    else:
+        print("No cover provided. Attempting to scrape IGDB...")
+        scraped_url = igdb.search_game(title)
+        
+        if scraped_url:
+            try:
+                img_data = requests.get(scraped_url).content
+                
+                cover_filename = f"{uuid.uuid4()}_scraped.jpg"
+                cover_real_path = os.path.join(UPLOAD_DIR, "covers", cover_filename)
+                
+                with open(cover_real_path, "wb") as f:
+                    f.write(img_data)
+                
+                cover_db_path = f"covers/{cover_filename}"
+                print("Cover scraped and saved successfully.")
+            except Exception as e:
+                print(f"Error downloading scraped cover: {e}")
 
     db_game = models.Game(
         title=title,
-        platform_id=platform_id,
-        rom_path=rom_path,
-        cover_path=cover_path
+        rom_path=f"roms/{rom_filename}",
+        cover_path=cover_db_path,
+        platform_id=platform_id
     )
-    
     db.add(db_game)
     db.commit()
     db.refresh(db_game)
+    
     return db_game
 
 @app.get("/games/", response_model=List[schemas.Game])

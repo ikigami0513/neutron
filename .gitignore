@@ -4,6 +4,7 @@ poetry.lock
 
 server/media/
 server/app.db
+server/.env
 
 client/local_config.json
 client/local_library.json
