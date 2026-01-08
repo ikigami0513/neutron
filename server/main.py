@@ -1,9 +1,12 @@
 import os
 import shutil
 import uuid
+import time
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, Form
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
@@ -118,24 +121,53 @@ def read_games(
 
     return query.offset(skip).limit(limit).all()
 
-@app.post("/saves/", response_model=schemas.Save)
-def create_save(
-    game_id: int = Form(...),
-    save_file: UploadFile = File(...),
-    db: Session = Depends(get_db)
-):
-    game = db.query(models.Game).filter(models.Game.id == game_id).first()
-    if not game:
-        raise HTTPException(status_code=404, detail="Game not found")
+@app.post("/games/{game_id}/save")
+def create_save(game_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    timestamp = int(time.time())
+    filename = f"{game_id}_{timestamp}.sav"
+    file_location = os.path.join("saves", filename)
 
-    file_path = save_upload_file(save_file, "saves")
+    with open(file_location, "wb+") as file_object:
+        shutil.copyfileobj(file.file, file_object)
 
     db_save = models.Save(
+        file_path=file_location,
         game_id=game_id,
-        file_path=file_path
+        created_at=datetime.utcnow()
     )
-
     db.add(db_save)
     db.commit()
     db.refresh(db_save)
-    return db_save
+
+    return {"info": "Save version created", "save_id": db_save.id}
+
+@app.get("/games/{game_id}/save/latest")
+def get_latest_save(game_id: int, db: Session = Depends(get_db)):
+    latest_save = db.query(models.Save)\
+        .filter(models.Save.game_id == game_id)\
+        .order_by(models.Save.created_at.desc())\
+        .first()
+
+    if not latest_save or not os.path.exists(latest_save.file_path):
+        raise HTTPException(status_code=404, detail="No save found for this game")
+
+    return FileResponse(
+        latest_save.file_path, 
+        filename=f"{game_id}.sav",
+        headers={"Cache-Control": "no-cache"} 
+    )
+
+@app.get("/games/{game_id}/save/latest/info")
+def get_latest_save_info(game_id: int, db: Session = Depends(get_db)):
+    latest_save = db.query(models.Save)\
+        .filter(models.Save.game_id == game_id)\
+        .order_by(models.Save.created_at.desc())\
+        .first()
+
+    if not latest_save:
+        raise HTTPException(status_code=404, detail="No save found")
+
+    return {
+        "created_at": latest_save.created_at.isoformat(),
+        "id": latest_save.id
+    }
