@@ -2,6 +2,14 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
+class UserCreate(BaseModel):
+    username: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
 class PlatformBase(BaseModel):
     name: str
     icon_path: Optional[str] = None

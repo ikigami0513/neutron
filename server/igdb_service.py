@@ -1,9 +1,6 @@
 import os
 import requests
 import time
-from dotenv import load_dotenv
-
-load_dotenv()
 
 CLIENT_ID = os.getenv("IGDB_CLIENT_ID")
 CLIENT_SECRET = os.getenv("IGDB_CLIENT_SECRET")

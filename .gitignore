@@ -8,3 +8,4 @@ server/.env
 
 client/local_config.json
 client/local_library.json
+client/local_auth.json

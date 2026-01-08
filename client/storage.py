@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from config import LIBRARY_FILE, CONFIG_FILE
+from config import LIBRARY_FILE, CONFIG_FILE, AUTH_FILE
 
 def load_json(filename):
     if not os.path.exists(filename):
@@ -34,3 +34,14 @@ def save_local_config(data):
 
 def sanitize_filename(name):
     return re.sub(r'[\\/*?:"<>|]', "", name)
+
+def save_auth_token(token_data):
+    save_json(AUTH_FILE, token_data)
+
+def load_auth_token():
+    return load_json(AUTH_FILE)
+
+def delete_auth_token():
+    if os.path.exists(AUTH_FILE):
+        os.remove(AUTH_FILE)
+        

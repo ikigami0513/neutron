@@ -1,3 +1,7 @@
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import os
 import shutil
 import uuid
@@ -5,13 +9,17 @@ import time
 from datetime import datetime
 from typing import List, Optional
 
+from jose import JWTError, jwt
 import requests
 from igdb_service import igdb
 
 from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, Form
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+
+import auth
 
 import models
 import schemas
@@ -47,6 +55,45 @@ def save_upload_file(upload_file: UploadFile, subfolder: str) -> str:
         shutil.copyfileobj(upload_file.file, buffer)
         
     return f"{subfolder}/{unique_filename}"
+
+@app.post("/register", response_model=schemas.Token)
+def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    # Vérifier si user existe déjà
+    db_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    
+    # Créer user
+    hashed_pwd = auth.get_password_hash(user.password)
+    new_user = models.User(username=user.username, hashed_password=hashed_pwd)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    # Générer token auto-login
+    access_token = auth.create_access_token(data={"sub": new_user.username, "id": new_user.id})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/token", response_model=schemas.Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # OAuth2PasswordRequestForm attend 'username' et 'password'
+    user = db.query(models.User).filter(models.User.username == form_data.username).first()
+    if not user or not auth.verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+    
+    access_token = auth.create_access_token(data={"sub": user.username, "id": user.id})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/users/me")
+def read_users_me(token: str = Depends(OAuth2PasswordBearer(tokenUrl="token"))):
+    try:
+        payload = jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return {"username": username, "id": payload.get("id")}
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
 
 @app.post("/platforms/", response_model=schemas.Platform)
 def create_platform(

@@ -1,15 +1,99 @@
 import os
 import shutil
 import requests
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 import config
 import storage
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = "super_secret_key_change_me"
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_token' in session:
+            return f(*args, **kwargs)
+
+        local_auth = storage.load_auth_token()
+        token = local_auth.get('access_token')
+        username = local_auth.get('username')
+
+        if token:
+            try:
+                headers = {"Authorization": f"Bearer {token}"}
+                resp = requests.get(f"{config.API_BASE_URL}/users/me", headers=headers)
+                
+                if resp.status_code == 200:
+                    session['user_token'] = token
+                    session['username'] = username  # On peut aussi le récupérer de resp.json()['username']
+                    print(f"[Auto-Login] Welcome back {session['username']}")
+                    return f(*args, **kwargs)
+                else:
+                    print("[Auto-Login] Token invalide ou expiré.")
+                    storage.delete_auth_token()
+            except:
+                print("[Auto-Login] Impossible de contacter l'API.")
+
+        return redirect(url_for('login_page'))
+        
+    return decorated_function
+
+@app.route('/login', methods=['GET'])
+def login_page():
+    return render_template('login.html')
+
+@app.route('/auth', methods=['POST'])
+def login_logic():
+    username = request.form.get('username')
+    password = request.form.get('password')
+    action = request.form.get('action')
+
+    try:
+        if action == 'register':
+            resp = requests.post(f"{config.API_BASE_URL}/register", json={"username": username, "password": password})
+            if resp.status_code == 200:
+                data = resp.json()
+                session['user_token'] = data['access_token']
+                session['username'] = username
+
+                storage.save_auth_token({"access_token": data['access_token'], "username": username})
+
+                flash(f"Welcome to Neutron, {username}!", "success")
+                return redirect(url_for('list_games'))
+            else:
+                error = resp.json().get('detail', 'Registration failed')
+                flash(error, "error")
+
+        elif action == 'login':
+            resp = requests.post(f"{config.API_BASE_URL}/token", data={"username": username, "password": password})
+            if resp.status_code == 200:
+                data = resp.json()
+                session['user_token'] = data['access_token']
+                session['username'] = username
+
+                storage.save_auth_token({"access_token": data['access_token'], "username": username})
+                
+                flash("Login successful.", "success")
+                return redirect(url_for('list_games'))
+            else:
+                flash("Invalid username or password.", "error")
+
+    except requests.exceptions.ConnectionError:
+        flash("Server is offline. Cannot login.", "error")
+
+    return redirect(url_for('login_page'))
+
+@app.route('/logout')
+def logout():
+    session.pop('user_token', None)
+    session.pop('username', None)
+    storage.delete_auth_token()
+    flash("You have been logged out.", "success")
+    return redirect(url_for('login_page'))
 
 @app.route('/')
+@login_required
 def list_games():
     filter_platform_id = request.args.get('platform_id')
     search_query = request.args.get('q')
@@ -57,10 +141,12 @@ def list_games():
     )
 
 @app.route('/platforms/new', methods=['GET'])
+@login_required
 def new_platform_form():
     return render_template('create_platform.html')
 
 @app.route('/platforms/create', methods=['POST'])
+@login_required
 def create_platform_logic():
     name = request.form.get('name')
     icon_file = request.files.get('icon')
@@ -83,6 +169,7 @@ def create_platform_logic():
     return redirect(url_for('new_platform_form'))
 
 @app.route('/games/new', methods=['GET'])
+@login_required
 def new_game_form():
     platforms = []
     try:
@@ -94,6 +181,7 @@ def new_game_form():
     return render_template('create_game.html', platforms=platforms)
 
 @app.route('/games/create', methods=['POST'])
+@login_required
 def create_game_logic():
     title = request.form.get('title')
     platform_id = request.form.get('platform_id')
@@ -122,6 +210,7 @@ def create_game_logic():
     return redirect(url_for('new_game_form'))
 
 @app.route('/games/install/<int:game_id>', methods=['POST'])
+@login_required
 def install_game(game_id):
     try:
         all_games = requests.get(f"{config.API_BASE_URL}/games/").json()
@@ -153,6 +242,7 @@ def install_game(game_id):
     return redirect(url_for('list_games'))
 
 @app.route('/settings', methods=['GET'])
+@login_required
 def settings_page():
     platforms = []
     try:
@@ -173,6 +263,7 @@ def settings_page():
     return render_template('settings.html', platforms=platforms, fullscreen=is_fullscreen)
 
 @app.route('/settings/save', methods=['POST'])
+@login_required
 def save_settings():
     local_config = storage.load_local_config()
 
