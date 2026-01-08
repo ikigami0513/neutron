@@ -59,25 +59,32 @@
 </div>
 
 {% if games %}
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {% for game in games %}
             
             <div class="group bg-slate-800 rounded-xl shadow-lg border border-white/5 overflow-hidden hover:border-primary transition-all duration-300 hover:-translate-y-1 flex flex-col h-full">
                 
-                <div class="aspect-[3/4] w-full relative bg-slate-900 overflow-hidden">
+                <div class="aspect-video w-full relative bg-slate-900 overflow-hidden">
                     {% if game.cover_path %}
+                        
+                        <div class="absolute inset-0 overflow-hidden">
+                            <img src="{{ api_base_url }}/media/{{ game.cover_path }}" 
+                                 class="w-full h-full object-cover blur-xl opacity-40 scale-110 grayscale-[30%]">
+                        </div>
+
                         <img src="{{ api_base_url }}/media/{{ game.cover_path }}" 
                              alt="{{ game.title }}" 
-                             class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                             class="relative w-full h-full object-contain p-3 z-10 drop-shadow-2xl transition-transform duration-500 group-hover:scale-110">
+                    
                     {% else %}
-                        <div class="w-full h-full flex flex-col items-center justify-center text-slate-700 bg-slate-900">
+                        <div class="w-full h-full flex flex-col items-center justify-center text-slate-700 bg-slate-900 relative z-10">
                             <i class="fa-regular fa-image text-3xl mb-2"></i>
                             <span class="text-[10px] font-bold uppercase">No Cover</span>
                         </div>
                     {% endif %}
 
                     {% if game.is_installed %}
-                        <div class="absolute top-2 right-2">
+                        <div class="absolute top-2 right-2 z-20">
                             <span class="flex h-3 w-3 relative">
                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                                 <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500 border-2 border-slate-800"></span>
@@ -86,14 +93,14 @@
                     {% endif %}
                 </div>
 
-                <div class="p-4 flex flex-col flex-grow">
+                <div class="p-4 flex flex-col flex-grow relative z-20 bg-slate-800">
                     
                     <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center space-x-1.5 opacity-60">
                             {% if game.platform and game.platform.icon_path %}
-                                <img src="{{ api_base_url }}/media/{{ game.platform.icon_path }}" class="w-3 h-3 object-contain invert">
+                                <img src="{{ api_base_url }}/media/{{ game.platform.icon_path }}" class="w-6 h-3 object-contain invert">
                             {% endif %}
-                            <span class="text-[10px] font-bold text-slate-300 uppercase tracking-wide truncate max-w-[80px]">
+                            <span class="text-[10px] font-bold text-slate-300 uppercase tracking-wide truncate max-w-[150px]">
                                 {{ game.platform.name if game.platform else 'Unknown' }}
                             </span>
                         </div>
@@ -106,20 +113,20 @@
                         {% endif %}
                     </div>
 
-                    <h3 class="text-sm font-bold text-white leading-snug mb-3 line-clamp-2 min-h-[2.5em]" title="{{ game.title }}">
+                    <h3 class="text-base font-bold text-white leading-snug mb-3 line-clamp-1" title="{{ game.title }}">
                         {{ game.title }}
                     </h3>
 
                     <div class="mt-auto pt-2">
                         {% if game.is_installed %}
                             <button onclick="launchGame('{{ game.id }}', '{{ game.platform.id }}')" 
-                                    class="w-full bg-primary hover:brightness-110 text-white text-xs font-bold py-2 rounded-lg transition-all shadow-lg flex items-center justify-center">
+                                    class="w-full bg-primary hover:brightness-110 text-white text-xs font-bold py-3 rounded-lg transition-all shadow-lg flex items-center justify-center">
                                 <i class="fa-solid fa-play mr-2"></i> PLAY
                             </button>
                         {% else %}
                             <form action="/games/install/{{ game.id }}" method="POST">
                                 <button type="submit" 
-                                        class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center border border-white/5">
+                                        class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold py-3 rounded-lg transition-colors flex items-center justify-center border border-white/5">
                                     <i class="fa-solid fa-download mr-2"></i> INSTALL
                                 </button>
                             </form>
@@ -131,7 +138,6 @@
 
         {% endfor %}
     </div>
-
 {% else %}
     <div class="flex flex-col items-center justify-center h-[50vh] text-center mt-10">
         {% if active_search or active_filter %}
