@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto mt-6">
+    
+    <div class="mb-8 border-b border-white/10 pb-4 flex justify-between items-end">
+        <div>
+            <h2 class="text-3xl font-bold text-white">Configuration</h2>
+            <p class="text-slate-400 text-sm mt-1">Link your platforms to local emulators.</p>
+        </div>
+        <div class="bg-slate-800 px-3 py-1 rounded text-xs text-slate-400 border border-white/5">
+            <i class="fa-solid fa-info-circle mr-1"></i> Changes are saved locally
+        </div>
+    </div>
+
+    <div class="bg-slate-800 rounded-2xl shadow-2xl border border-white/5 overflow-hidden">
+        <form action="{{ url_for('save_settings') }}" method="POST">
+            <div class="mb-8 border-b border-white/5 pb-8">
+                <h3 class="text-xl font-bold text-white mb-4">Display</h3>
+                
+                <div class="flex items-center justify-between bg-slate-900/50 p-4 rounded-xl border border-white/5">
+                    <div class="flex items-center">
+                        <div class="h-10 w-10 bg-slate-700 rounded-lg flex items-center justify-center text-white mr-4">
+                            <i class="fa-solid fa-expand"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-white">Start in Fullscreen</p>
+                            <p class="text-xs text-slate-400">Launch the application in full screen mode automatically.</p>
+                        </div>
+                    </div>
+
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="fullscreen" class="sr-only peer" {% if fullscreen %}checked{% endif %}>
+                        <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <h3 class="text-xl font-bold text-white mb-4">Emulators</h3>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-900/50 border-b border-white/5 text-slate-400 text-xs uppercase tracking-wider">
+                            <th class="p-5 font-semibold">Platform</th>
+                            <th class="p-5 font-semibold w-full">Emulator Executable Path</th>
+                            <th class="p-5 font-semibold text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        {% for platform in platforms %}
+                        <tr class="group hover:bg-white/5 transition-colors">
+                            
+                            <td class="p-5">
+                                <div class="flex items-center space-x-4">
+                                    <div class="h-10 w-10 flex-shrink-0 bg-slate-700 rounded-lg flex items-center justify-center border border-white/10">
+                                        {% if platform.icon_path %}
+                                            <img class="h-6 w-6 object-contain" src="http://127.0.0.1:8000/media/{{ platform.icon_path }}" alt="">
+                                        {% else %}
+                                            <span class="text-xs font-bold text-slate-500">?</span>
+                                        {% endif %}
+                                    </div>
+                                    <span class="font-medium text-white">{{ platform.name }}</span>
+                                </div>
+                            </td>
+
+                            <td class="p-5">
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fa-solid fa-terminal text-slate-600"></i>
+                                    </div>
+                                    <input type="text" 
+                                           id="input_{{ platform.id }}" 
+                                           name="emulator_path_{{ platform.id }}" 
+                                           value="{{ platform.emulator_path }}"
+                                           placeholder="C:\Emulators\emu.exe"
+                                           class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-3 py-2 text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                                </div>
+                            </td>
+
+                            <td class="p-5 text-right">
+                                <button type="button" 
+                                        onclick="pickFile('{{ platform.id }}')"
+                                        class="bg-slate-700 hover:bg-indigo-600 text-white text-xs font-bold py-2 px-4 rounded-lg transition-all shadow-lg hover:shadow-indigo-500/20 whitespace-nowrap border border-white/5">
+                                    <i class="fa-regular fa-folder-open mr-2"></i> Browse
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-slate-900/50 p-6 border-t border-white/5 flex justify-end">
+                <button type="submit" class="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-green-900/20 transform transition hover:scale-105 flex items-center">
+                    <i class="fa-solid fa-save mr-2"></i> Save Configuration
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Variable globale pour stocker l'API quand elle sera prête
+    let pywebviewApi = null;
+
+    // 1. On écoute l'événement spécial qui dit "Le pont Python est prêt !"
+    window.addEventListener('pywebviewready', function() {
+        console.log("✅ Pywebview est connecté !");
+        pywebviewApi = window.pywebview.api;
+    });
+
+    // 2. La fonction appelée par le bouton
+    function pickFile(platformId) {
+        console.log("Tentative d'ouverture pour l'ID : " + platformId);
+
+        // Si l'API n'est pas encore chargée
+        if (!pywebviewApi && window.pywebview) {
+            pywebviewApi = window.pywebview.api;
+        }
+
+        if (pywebviewApi) {
+            const btn = event.currentTarget; // Utiliser currentTarget pour cibler le bouton même si on clique sur l'icône
+            const originalHtml = btn.innerHTML;
+            
+            // Feedback visuel
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            
+            // Appel à Python
+            pywebviewApi.pick_file().then(function(path) {
+                console.log("Chemin reçu :", path);
+                
+                if (path) {
+                    const inputElement = document.getElementById('input_' + platformId);
+                    if (inputElement) {
+                        inputElement.value = path;
+                        // Flash vert sur l'input
+                        inputElement.classList.add('ring-2', 'ring-green-500', 'border-green-500');
+                        setTimeout(() => inputElement.classList.remove('ring-2', 'ring-green-500', 'border-green-500'), 1000);
+                    }
+                }
+                // Reset bouton
+                btn.innerHTML = originalHtml;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+
+            }).catch(function(err) {
+                console.error("Erreur Python :", err);
+                btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error';
+            });
+        } else {
+            alert("Erreur : La liaison avec Python n'est pas active.");
+        }
+    }
+</script>
+{% endblock %}

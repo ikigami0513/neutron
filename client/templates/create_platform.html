@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto mt-10">
+    
+    <div class="mb-8 border-b border-white/10 pb-4">
+        <h2 class="text-3xl font-bold text-white">New Platform</h2>
+        <p class="text-slate-400 text-sm mt-1">Add a new console to your collection (e.g. SNES, Game Boy).</p>
+    </div>
+
+    <div class="bg-slate-800 rounded-2xl p-8 border border-white/5 shadow-2xl">
+        <form action="{{ url_for('create_platform_logic') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+            
+            <div>
+                <label for="name" class="block text-sm font-medium text-slate-300 mb-2">Platform Name</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-gamepad text-slate-500"></i>
+                    </div>
+                    <input type="text" id="name" name="name" required placeholder="Nintendo Entertainment System"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Platform Icon</label>
+                <div class="relative group cursor-pointer">
+                    <div class="bg-slate-900/50 border-2 border-dashed border-slate-700 rounded-xl p-8 text-center hover:border-indigo-500 transition duration-300">
+                        <div class="mb-3">
+                            <i class="fa-solid fa-image text-4xl text-slate-500 group-hover:text-indigo-400 transition-colors"></i>
+                        </div>
+                        <p class="text-sm font-medium text-slate-300">Click to upload icon</p>
+                        <p class="text-xs text-slate-500 mt-1">PNG or JPG (Transparent background recommended)</p>
+                    </div>
+                    <input type="file" id="icon" name="icon" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                </div>
+            </div>
+
+            <div class="pt-4">
+                <button type="submit"
+                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/30 transform transition hover:scale-[1.02]">
+                    Create Platform
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

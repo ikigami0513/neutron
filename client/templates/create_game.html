@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto mt-10">
+    <div class="mb-8 border-b border-white/10 pb-4">
+        <h2 class="text-3xl font-bold text-white">Add New Game</h2>
+        <p class="text-slate-400 text-sm mt-1">Fill in the details to add a ROM to your library.</p>
+    </div>
+
+    <div class="bg-slate-800 rounded-2xl p-8 border border-white/5 shadow-2xl">
+        <form action="{{ url_for('create_game_logic') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+            
+            <div>
+                <label for="title" class="block text-sm font-medium text-slate-300 mb-2">Game Title</label>
+                <input type="text" id="title" name="title" required placeholder="e.g. The Legend of Zelda"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition">
+            </div>
+
+            <div>
+                <label for="platform_id" class="block text-sm font-medium text-slate-300 mb-2">Platform</label>
+                <div class="relative">
+                    <select id="platform_id" name="platform_id" required
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="" disabled selected>Select console...</option>
+                        {% for platform in platforms %}
+                            <option value="{{ platform.id }}">{{ platform.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-500">
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-slate-900/50 border-2 border-dashed border-slate-700 rounded-xl p-6 text-center hover:border-indigo-500 transition group cursor-pointer relative">
+                    <i class="fa-solid fa-file-code text-3xl text-slate-500 mb-3 group-hover:text-indigo-400"></i>
+                    <p class="text-sm font-medium text-slate-300">Upload ROM</p>
+                    <p class="text-xs text-slate-500 mt-1">.nes, .iso, .bin</p>
+                    <input type="file" name="rom" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                </div>
+
+                <div class="bg-slate-900/50 border-2 border-dashed border-slate-700 rounded-xl p-6 text-center hover:border-pink-500 transition group cursor-pointer relative">
+                    <i class="fa-solid fa-image text-3xl text-slate-500 mb-3 group-hover:text-pink-400"></i>
+                    <p class="text-sm font-medium text-slate-300">Cover Art</p>
+                    <p class="text-xs text-slate-500 mt-1">JPG or PNG</p>
+                    <input type="file" name="cover" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                </div>
+            </div>
+
+            <div class="pt-4">
+                <button type="submit"
+                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/30 transform transition hover:scale-[1.02]">
+                    Add to Collection
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+poetry.lock
+.venv
+*.pyc
+
+server/media/
+server/app.db
+
+client/local_config.json
+client/local_library.json

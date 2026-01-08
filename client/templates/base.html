@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neutron OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Masquer la scrollbar pour un look plus "app" */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+
+    <script>
+        // Écouteur global d'événements clavier
+        document.addEventListener('keydown', function(e) {
+            
+            // Si la touche appuyée est F11
+            if (e.key === 'F11') {
+                // Empêche le comportement par défaut du navigateur (par sécurité)
+                e.preventDefault();
+
+                // Vérifie que le pont Python est prêt
+                if (window.pywebview && window.pywebview.api) {
+                    window.pywebview.api.toggle_fullscreen();
+                    console.log("Toggling Fullscreen via F11");
+                }
+            }
+        });
+    </script>
+</head>
+
+<body class="bg-slate-900 text-white h-screen flex overflow-hidden selection:bg-indigo-500 selection:text-white">
+
+    <nav class="w-20 lg:w-64 flex-shrink-0 bg-slate-800/50 backdrop-blur-xl border-r border-white/10 flex flex-col justify-between py-6 transition-all duration-300">
+        
+        <div class="px-4 mb-8 text-center lg:text-left">
+            <a href="/" class="block group">
+                <div class="h-10 w-10 mx-auto lg:mx-0 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-atom text-white text-xl"></i>
+                </div>
+                <span class="hidden lg:block mt-2 text-xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
+                    Neutron
+                </span>
+            </a>
+        </div>
+
+        <div class="flex-1 flex flex-col space-y-2 px-2">
+            <a href="/" class="flex items-center px-3 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all group">
+                <i class="fa-solid fa-gamepad text-xl w-8 text-center group-hover:text-indigo-400 transition-colors"></i>
+                <span class="hidden lg:block font-semibold ml-3">Library</span>
+            </a>
+            
+            <a href="/platforms/new" class="flex items-center px-3 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all group">
+                <i class="fa-solid fa-plus text-xl w-8 text-center group-hover:text-green-400 transition-colors"></i>
+                <span class="hidden lg:block font-medium ml-3">Add Platform</span>
+            </a>
+
+            <a href="/games/new" class="flex items-center px-3 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all group">
+                <i class="fa-solid fa-compact-disc text-xl w-8 text-center group-hover:text-pink-400 transition-colors"></i>
+                <span class="hidden lg:block font-medium ml-3">Add Game</span>
+            </a>
+        </div>
+
+        <div class="px-2">
+            <a href="/settings" class="flex items-center px-3 py-3 rounded-lg text-gray-400 hover:bg-white/10 hover:text-white transition-all group">
+                <i class="fa-solid fa-gear text-xl w-8 text-center group-hover:rotate-90 transition-transform duration-500"></i>
+                <span class="hidden lg:block font-medium ml-3">Settings</span>
+            </a>
+        </div>
+    </nav>
+
+    <main class="flex-1 relative flex flex-col h-full overflow-hidden">
+        
+        <div class="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-indigo-900/20 to-transparent pointer-events-none"></div>
+
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10 relative z-10">
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="fixed top-6 right-6 z-50 flex flex-col gap-2">
+                    {% for category, message in messages %}
+                        <div class="animate-bounce-in bg-slate-800/90 backdrop-blur border-l-4 {{ 'border-green-500' if category == 'success' else 'border-red-500' }} text-white px-6 py-4 rounded shadow-2xl flex items-center max-w-sm">
+                            <i class="{{ 'fa-solid fa-check-circle text-green-400' if category == 'success' else 'fa-solid fa-circle-exclamation text-red-400' }} mr-3"></i>
+                            <span class="font-medium">{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
